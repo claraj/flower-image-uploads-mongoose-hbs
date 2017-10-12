@@ -1,0 +1,45 @@
+<h1>{{flower.name}}</h1>
+
+<p>{{flower.name}} is {{flower.color}}</p>
+
+<div>
+
+  <h2>Image</h2>
+
+  {{# if flower.img_url}}
+    <img class="main_flower_image" src="/images/{{flower.img_url}}"> <P>Change?</P>
+  {{else}}
+    <P>No image for {{flower.name}}. Want to upload one? </P>
+  {{/if}}
+
+</div>
+
+<div>
+  <form action="/setImage" enctype="multipart/form-data" method="post" >
+    <input type="hidden" name = "_id" value="{{flower._id}}">
+    <input type="file" name="flower_image"  accept="image/*">
+    <input type="submit" value="Upload">
+  </form>
+</div>
+
+
+<div>
+
+<h2>Edit Color</h2>
+
+  <form action="/changeColor" method="post">
+    <input type="hidden" name = "_id" value="{{flower._id}}">
+    <input name="color" >
+    <input type="submit" value="Edit">
+  </form>
+</div>
+
+<div>
+  <h2>Delete</h2>
+
+  <form action="/delete" method="post">
+    <input type="hidden" name = "_id" value="{{flower._id}}">
+    <input class="danger" type="submit" value="Delete">
+  </form>
+
+</div>

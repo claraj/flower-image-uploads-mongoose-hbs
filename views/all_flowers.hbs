@@ -1,0 +1,17 @@
+<p>Add</p>
+<form method="post" action="/newFlower">
+Name  <input name="name" >
+Color  <input name="color" >
+  <input type="submit"></form>
+</form>
+
+
+
+{{# each flowers}}
+<div>  <h2>{{this.name}}</h2>
+ <P> {{this.name}} is {{this.color}} </P>
+  <img src="{{this.img_url}}"/>
+
+  <a href="/details/{{this._id}}">Edit or delete {{this.name}}</a>
+</div>
+{{/each}}
