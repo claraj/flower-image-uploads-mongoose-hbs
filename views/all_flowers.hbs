@@ -6,6 +6,7 @@ Color  <input name="color" >
 </form>
 
 
+{{# if flowers }}
 
 {{# each flowers}}
 <div>  <h2>{{this.name}}</h2>
@@ -14,4 +15,10 @@ Color  <input name="color" >
 
   <a href="/details/{{this._id}}">Edit or delete {{this.name}}</a>
 </div>
+
 {{/each}}
+
+
+{{else}}
+<p>No flowers in the database.</p>
+{{/if}}

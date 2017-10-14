@@ -30,8 +30,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 // MONGO_URL = mongodb://localhost:27017/garden
 // plus whatever admin creds
 
-var url = process.env.MONGO_URL;
+
+//var url = process.env.MONGO_URL;
+
+
 console.log(process.env.MONGO_URL);
+
+let url = 'mongodb://127.0.0.1:27017/testGarden';
 
 MongoClient.connect(url).then((db) => {
   

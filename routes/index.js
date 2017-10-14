@@ -36,9 +36,9 @@ router.get('/', function(req, res, next) {
   * converts it to an ObjectID, and adds it to the request as req._id  */
 router.get('/details/:_id', idOr404.fromParams, function(req, res, next){
   
-  // console.log(req.params);  // { _id : 12345678 }
+    console.log(req.params);  // { _id : 12345678 }
 
-  req.flowers.findOne({_id: req._id }).
+  req.flowers.findOne({ _id: req._id }).
     then((doc) => {
       console.log('Flower document',  doc);
       if (doc) {
@@ -80,15 +80,15 @@ router.post('/newFlower', function(req, res, next){
 * idOr404.fromBody extracts the Object ID from the request body,
 * converts it to an ObjectID, and adds it to the request as req._id  */
 
-router.post('/changeColor', idOr404.fromBody, function(req, res, next){
+router.post('/setColor', idOr404.fromBody, function(req, res, next){
   
   console.log('update color', req.body);
   
-  // TODO validate: a color is provided... Or should this route
-  // consider that it's job is to remove the color if none is provided?
+  // TODO validate: a color is provided...
+  // TODO if no color provided, do not modify
   
   // Use $set parameter to specify what will be updated
-  req.flowers.findOneAndUpdate( { _id :req._id }, { $set : {color : req.body.color } } )
+  req.flowers.findOneAndUpdate( { _id : req.body._id }, { $set : {color : req.body.color } } )
     .then( (updated) => {
       console.log("this was updated", updated);
       
@@ -116,7 +116,7 @@ router.post('/delete', idOr404.fromBody, function(req, res, next){
   
   var flowerdoc;
   
-  req.flowers.findOne( { _id : req._id} )
+  req.flowers.findOne( { _id : req.body._id} )
     
     .then((doc) => {
       flowerdoc = doc;  //hacky????????
@@ -124,10 +124,10 @@ router.post('/delete', idOr404.fromBody, function(req, res, next){
       if (doc == null) {
         console.log("Not found, stop");
         res.statusCode = 404;
-        return next("Not found")  /// to 404  // todo not working deleting doc that doesn't exist
+        throw Error("Not found")  /// to 404  // todo goes to error page but  working, status is 500
       }
      
-      return req.flowers.findOneAndDelete( {_id: req._id } );
+      return req.flowers.findOneAndDelete( {_id: req.body._id } );
       
     })
     
@@ -155,7 +155,8 @@ router.post('/delete', idOr404.fromBody, function(req, res, next){
       return res.redirect('/');
     })
     
-    .catch((err) => {next(err)});
+    .catch((err) =>
+      {next(err)});
   
 });
 
