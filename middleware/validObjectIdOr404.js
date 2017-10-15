@@ -12,7 +12,6 @@ function fromParams(req, res, next) {
   if (! ObjectID.isValid(_id) ) {
     console.log("No valid ObjectID associated with the _id attribute in the request PARAMS. _id was ", _id);
     res.status(404);
-    //next(Error("Object ID not found"));   // to the error handler.
     next();
   }
   

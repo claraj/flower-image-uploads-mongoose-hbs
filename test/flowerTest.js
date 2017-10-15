@@ -6,6 +6,8 @@ let server = require('../app');
 let should = chai.should();   // call function
 var expect = chai.expect;  // don't call function
 
+var _ = require('lodash');
+
 let mongodb = require('mongodb');
 let ObjectID = mongodb.ObjectID;
 
@@ -89,12 +91,10 @@ describe('open close db', () => {
               expect(res.status).to.equal(404);
               
               chai.request(server)
-                .get('/details/59e0eddd4140789006aa5fae')  // A valid _id but not in the database.
+                .get('/details/59e0ed7d4140789006aa5fae')  // A valid _id but not in the database.
                 .end((err, res) => {
                   expect(res.status).to.equal(404);
-                  
                   done();
-                  
                 });
             });
         });
@@ -159,17 +159,16 @@ describe('open close db', () => {
     });
     
     
-    it('should remove the color on POST to setColor if color is missing or empty string', (done) => {
+    it('should not modify the flower document on POST to setColor if color is missing or empty string', (done) => {
       chai.request(server)
         .post('/setColor')
         .send({'_id': _id})
         .end((err, res) => {
           expect(res.status).to.equal(200);
           expect(res.text).to.include('rose');
-          expect(res.text).to.not.include('green');
-          
+          expect(res.text).to.include('pink');   // no modifications
           flowers.findOne({ _id : ObjectID(_id)}).then((doc) =>{
-            expect(doc).to.not.have.property('color');
+            expect(doc.color).to.be.equal('pink');
             return done();
           }).catch((err) => { return done(err); });
         });
@@ -202,7 +201,6 @@ describe('open close db', () => {
         .send({ '_id' : _id})
         .end((err, res) => {
           expect(res.status).to.equal(200);
-          console.log(res)
           expect(res.req.path).to.be.equal('/');         // TODO cleaner way of checking redirect?
           flowers.findOne({_id : _id}).then((doc) => {
             expect(doc).to.be.null;
@@ -221,8 +219,8 @@ describe('open close db', () => {
         .end((err, res) => {
           expect(res.status).to.be.equal(404);
           flowers.findOne({_id: _id}).then((doc) => {
-            console.log('THE DOC IS ', doc)
-            expect(doc).to.be.equal(rose);   // doc still in DB
+            let rose_equals_doc = _.isEqual(doc, rose);
+            expect(rose_equals_doc).to.be.true;
             return done();
           });
         });
@@ -236,8 +234,8 @@ describe('open close db', () => {
           
           expect(res.status).to.be.equal(404);
           flowers.findOne({_id: _id}).then((doc) => {
-            console.log('THE DOC IS ', doc)
-            expect(doc).to.be.equal(rose);   // doc still in DB
+            let rose_equals_doc = _.isEqual(doc, rose);
+            expect(rose_equals_doc).to.be.true;
             return done();
           });
         });
@@ -253,9 +251,11 @@ describe('open close db', () => {
     let _id;    // Of the test flower inserted into the database
     let rose;
     
-    beforeEach('insert one test document', function (done) {
+    beforeEach('insert two test documents', function (done) {
       
-      flowers.insertOne({ name: 'rose', color: 'pink'}).then((result)=>{
+      flowers.insertMany(
+        [{ name: 'rose', color: 'pink'},
+        { name: 'daisy', color: 'white'}]).then((result)=>{
         _id = result.insertedId;
         rose = result.ops[0];
         return done();
