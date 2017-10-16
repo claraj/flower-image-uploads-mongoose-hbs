@@ -110,10 +110,13 @@ router.post('/setColor', idOr404.fromBody, function(req, res, next){
 /* Delete a flower from the database. */
 router.post('/delete', idOr404.fromBody, function(req, res, next){
   
+  var flower;
+  
   req.flowers.findOne( { _id : req.body._id} )
     
     .then((doc) => {
       
+      flower = doc;
       if (doc == null) {
         let notFound = Error("Not found");
         notFound.status = 404;
@@ -124,10 +127,11 @@ router.post('/delete', idOr404.fromBody, function(req, res, next){
       }
     })
     
-    .then((result) => {   //
-      
-      if (result.value.img_url) {
-        return fs.unlink(path.join(uploadDir, result.value.img_url));  // this errors if doesn't exist....
+    .then((result) => {
+    
+      // Delete image, if it exists
+      if (flower.img_url) {
+        return fs.unlink(path.join(uploadDir, flower.img_url));  // this errors if doesn't exist....
       }
       
     })
@@ -139,7 +143,7 @@ router.post('/delete', idOr404.fromBody, function(req, res, next){
     .catch((err) => {
     
     if (err.code === 'ENOENT') {
-      console.log('Warning - tried to delete this file but not found', result.value.img_url)
+      console.log('Warning - tried to delete this file but not found', flower.img_url);
       res.redirect('/');    // .... file not found - who knows why it's not there, but the goal is to not have it there, so probably ok. Should log a warning.
     }
     else {
@@ -153,8 +157,6 @@ router.post('/delete', idOr404.fromBody, function(req, res, next){
 /* Use multer to upload the image and save it
  * idOR404 middleware used too */
 router.post('/setImage', upload.single('flower_image'), idOr404.fromBody, function(req, res, next){
-  
-  console.log('SET IMAGE' , req.file, ' and id is ', req.body._id);
   
   var oldImage;
   var newFilename;
@@ -191,34 +193,28 @@ router.post('/setImage', upload.single('flower_image'), idOr404.fromBody, functi
     
       .then(() => {
       
-        var multerFilepath = req.file.path;  // e.g. public/images/234567432567
-        
+      console.log('rename');
+      
         newFilepath = req.file.path + '.' + mime.getExtension(req.file.mimetype);   // todo other extensions
         newFilename = req.file.filename + '.' + mime.getExtension(req.file.mimetype);
         
-        console.log('filename is',  newFilepath, req.file.path);
         return fs.rename(req.file.path, newFilepath)
       
       })
-    
-    
+      
       .then(() => {
-      
-        console.log('done renaming. Update document....');
-        return req.flowers.findOneAndUpdate({_id: req._id}, {$set: {img_url: newFilename}})
-      
-      })
-      
-      .then((result) => {
-      
-        console.log('updated doc with image, results ', result);
-        //
-        // return res.redirect('details/' + req._id);
-        res.redirect('back');
-        
-      })
   
+        console.log('updatedb' +
+          '');
+  
+  
+        return req.flowers.findOneAndUpdate({_id: req._id}, {$set: {img_url: newFilename}})
+      })
+      
       .then(() => {
+  
+        console.log('deleet old');
+  
   
         // Delete (unlink) old image
         if (oldImage) {
@@ -227,15 +223,26 @@ router.post('/setImage', upload.single('flower_image'), idOr404.fromBody, functi
     
       })
       
+      .then((result) => {
+  
+        console.log('redsite');
+  
+  
+        res.redirect('back');
+      })
+  
       .catch((err) => {
-      
+  
+  
+        console.log('err', err);
+  
         if (err.code === 'ENOENT') {
           // deleted file not found, log and ignore
           console.log('Tried to delete the old file for this flower, but it was not found', uploadDir, oldImage)
           res.redirect('back')
+        } else {
+          next(err);
         }
-      
-         next(err);
       });
   
   }
