@@ -1,12 +1,16 @@
 var express = require('express');
 var idOr404 = require('../middleware/validObjectIdOr404');
 var fs = require('fs-extra');
+var path = require('path');
+var mime = require('mime');
 
+var uploadDir = require('../config/imageUploads').uploadDir;
 var multer = require('multer');
-var upload = multer({ dest : 'public/images'});
+var upload = multer({ dest : uploadDir});
 
 var router = express.Router();
 
+//fs.ensureDirSync(uploadDir);   // does this do anything??
 
 
 /* GET home page, list of all flower documents. */
@@ -17,11 +21,10 @@ router.get('/', function(req, res, next) {
   
   req.flowers.find({}).sort( {'name': 1} ).toArray()
     .then( (docs) => {
-      //console.log(docs);  // Uncomment to see an array of all the documents
-      return res.render('all_flowers', { flowers:docs } );
+      res.render('all_flowers', { flowers:docs } );
     })
     .catch((err) => {
-      return next(err);   // to the 500 error handler
+      next(err);   // to the 500 error handler
     });
   
 });
@@ -35,21 +38,17 @@ router.get('/', function(req, res, next) {
   * converts it to an ObjectID, and adds it to the request as req._id  */
 router.get('/details/:_id', idOr404.fromParams, function(req, res, next){
   
-  console.log(req.params);  // { _id : 12345678 }
-  
   req.flowers.findOne({ _id: req._id }).
   then((doc) => {
-    console.log('Flower document',  doc);
-    
     if (doc) {
-      return res.render('flower_detail', {flower : doc});
+      res.render('flower_detail', {flower : doc});
     } else {
       res.statusCode = 404;
-      return next()
+      next()
     }
   })
     .catch((err) => {
-      return next(err);
+      next(err);
     });
   
 });
@@ -58,19 +57,22 @@ router.get('/details/:_id', idOr404.fromParams, function(req, res, next){
 /* POST to add a new flower. */
 router.post('/newFlower', function(req, res, next){
   
-  console.log(req.body);
+  //validate: need a name. Color is optional
   
-  // TODO validate: a name and a color, at least
+  if (!req.body.name) {
+    req.flash('error', 'Enter a name for the flower');
+    res.redirect('/');
+  }
   
-  req.flowers.insertOne(req.body)
-    .then((results) => {
-      console.log('Results from the database:', results);  // Includes the insertedCount and new document
-      return res.redirect('/');
-    })
-    .catch((err) => {
-      return next(err);
-    });
-  
+  else {
+    req.flowers.insertOne(req.body)
+      .then((results) => {
+        res.redirect('/');
+      })
+      .catch((err) => {
+        next(err);
+      });
+  }
 });
 
 
@@ -82,89 +84,72 @@ router.post('/newFlower', function(req, res, next){
 
 router.post('/setColor', idOr404.fromBody, function(req, res, next){
   
-  console.log('update color', req.body);
-  
-  // TODO validate: a color is provided - if not, then take no action.
+  // if no color provided, do not modify any documents
   if (!req.body.color) {
-    return res.redirect('/details/' + req.body._id);
+    res.redirect('/details/' + req.body._id);
   }
-  // TODO if no color provided, do not modify
   
   // Use $set parameter to specify what will be updated
-  req.flowers.findOneAndUpdate( { _id : req.body._id }, { $set : {color : req.body.color } } )
-    .then( (updated) => {
-      console.log("this was updated", updated);
-      
-      // Was something updated? No? 404.
-      console.log(updated.lastErrorObject.n);
-      if (updated.lastErrorObject.n !== 1) {
-        res.statusCode = 404;
-        return next();
-      }
-      
-      return res.redirect('/details/' + req.body._id);
-    })
-    .catch((err) => {
-      console.log(err);
-      return next(err);
-    });
-  
+  else {
+    
+    req.flowers.findOneAndUpdate({_id: req.body._id}, {$set: {color: req.body.color}})
+      .then((updated) => {
+        
+        // Was something updated? No? 404.
+        if (updated.lastErrorObject.n !== 1) {
+          res.statusCode = 404;
+          next();
+        }
+        else {
+          res.redirect('/details/' + req.body._id);
+        }
+      })
+      .catch((err) => {
+        next(err);
+      });
+  }
 });
 
 
 /* Delete a flower from the database. */
 router.post('/delete', idOr404.fromBody, function(req, res, next){
   
-  console.log(req.body);
-  
-  var flowerdoc;
-  
   req.flowers.findOne( { _id : req.body._id} )
     
     .then((doc) => {
-      flowerdoc = doc;  //hacky????????
-      console.log('document', doc);
       
       if (doc == null) {
-        console.log("Not found, stop");
-        res.statusCode = 404;
-        throw(new Error());  /// todo nope
+        let notFound = Error("Not found");
+        notFound.status = 404;
+        next(notFound);
       }
-      
-      return req.flowers.findOneAndDelete( {_id: req.body._id } );  // pass to next then()
-      
+      else {
+        return req.flowers.findOneAndDelete({_id: req.body._id});  // pass to next then()
+      }
     })
     
-    .then((res) => {   //
+    .then((result) => {   //
       
-      // remove image from filesystem, if present. 'unlink' means delete.
-      console.log('RESULT FROM findOneAndDelete', res);
-      // console.log('delete result', result.value);
-      
-      if (res.value.img_url) {
-        return fs.exists('public/images/' + result.value.img_url);
-        // todo handle file not found without sending error to client
-      }
-      
-    })
-    
-    .then((exists) =>{
-      
-      console.log('there is a file on the filesystem? ' + exists);
-      
-      if (exists) {
-        return fs.unlink('public/images/' + flowerdoc.img_url);
+      if (result.value.img_url) {
+        return fs.unlink(path.join(uploadDir, result.value.img_url));  // this errors if doesn't exist....
       }
       
     })
     
     .then( () => {
-      return res.redirect('/');
+      res.redirect('/');
     })
     
     .catch((err) => {
-      next(err)}
-    );
+    
+    if (err.code === 'ENOENT') {
+      console.log('Warning - tried to delete this file but not found', result.value.img_url)
+      res.redirect('/');    // .... file not found - who knows why it's not there, but the goal is to not have it there, so probably ok. Should log a warning.
+    }
+    else {
+      next(err)
+    }
+    });
   
 });
 
@@ -172,34 +157,77 @@ router.post('/delete', idOr404.fromBody, function(req, res, next){
 /* Use multer to upload the image and save it  */
 router.post('/setImage', upload.single('flower_image'), idOr404.fromBody, function(req, res, next){
   
-  console.log(req.file);
+  console.log(req.file, ' and id is ', req.body._id);
   
-  var filepath = req.file.path + '.jpg';  // e.g. public/images/rose234567432567.jpg
-  // var filename =  + '.jpg';  // e.g. rose234567432567.jpg
+  var oldImage;
+  var newFilename;
+  var newFilepath;
   
-  var filename = req.file.filename + '.jpg';   // todo other extensions
-  console.log(filename);
+  // is there a file provided?
   
-  
-  fs.rename(req.file.path, filepath)
+  if (!req.file) {
     
-    .then(() => {
-      
-      console.log('done renaming. Update document....');
-      return req.flowers.findOneAndUpdate({_id: req._id}, {$set: {img_url: filename}})
-      
+    // flash error
+    
+    req.flash('error', 'Please provide an image file');
+    res.redirect('back');  // back to detail page.
+    
+  }
+  
+  else {
+  
+    // Is there a current image?
+  
+    req.flowers.findOne({_id: req.body._id}).then((doc) => {
+    
+      if (doc === null) {
+        //404
+        let notFound = Error("Not found");
+        notFound.status = 404;
+        return next(notFound);
+      }
+    
+      else {
+        oldImage = doc.img_url;
+      }
     })
+  
+    // Rename to have a .jpg extension
     
-    .then((result) => {
+      .then(() => {
       
-      console.log('updated doc with image, results ' , result);
-      return res.redirect('details/' + req._id);
+        var multerFilepath = req.file.path;  // e.g. public/images/234567432567
+        
+        newFilepath = req.file.path + '.' + mime.getExtension(req.file.mimetype);   // todo other extensions
+        newFilename = req.file.filename + '.' + mime.getExtension(req.file.mimetype);
+        
+        console.log('filename is',  newFilepath, req.file.path);
+        return fs.rename(req.file.path, newFilepath)
       
-    })
+      })
     
-    .catch((err) => {
-      return next(err);
-    });
+    
+      .then(() => {
+      
+        console.log('done renaming. Update document....');
+        return req.flowers.findOneAndUpdate({_id: req._id}, {$set: {img_url: newFilename}})
+      
+      })
+    
+      .then((result) => {
+      
+        console.log('updated doc with image, results ', result);
+        //
+        // return res.redirect('details/' + req._id);
+        res.redirect('back');
+        
+      })
+    
+      .catch((err) => {
+         next(err);
+      });
+  
+  }
   
   
 });

@@ -1,31 +1,30 @@
-//process.env.NODE_ENV = 'test';
+process.env.NODE_ENV = 'test';
 
 let chai = require('chai');
 let chaiHTTP = require('chai-http');
 let server = require('../app');
-let should = chai.should();   // call function
-var expect = chai.expect;  // don't call function
+var expect = chai.expect;
+
+// File operations
+var fs = require('fs-extra');
+var path = require('path');
+var testUploadDir = require('../config/imageUploads').uploadDir;
 
 var _ = require('lodash');
 
 let mongodb = require('mongodb');
 let ObjectID = mongodb.ObjectID;
 
-let test_db_url = 'mongodb://127.0.0.1:27017/testGarden';
+let config = require('../config/db');
+
+let test_db_url = config.url;
+
+console.log('In the tests, db url is ' + test_db_url);
+console.log('In the tests, upload dir  is ' + testUploadDir);
+
+
 chai.use(chaiHTTP);
 
-// Describe doesn't seem to like to live inside a mongo connect callback .
-
-// describe("hello world", function () {
-//   it("5 is equal to 5", function (done) {
-//     expect(5).is.equal(5);
-//     done();
-//   });
-//   it("5 is not equal to 15", function (done) {
-//     expect(5).is.equal(15);
-//     done();
-//   });
-// });
 
 describe('open close db', () => {
   
@@ -100,6 +99,63 @@ describe('open close db', () => {
         });
       
     });
+    
+    
+    it ('should create a new flower on POST to /newFlower', (done) => {
+      chai.request(server)
+        .post('/newFlower')
+        .send( {name : 'sunflower', color: 'yellow' })
+        .end((err, res) => {
+          expect(res.status).to.equal(200);
+          // redirect to flower page
+          expect(res.text).to.include('sunflower');
+          expect(res.text).to.include('yellow');
+  
+          flowers.findOne( {name : 'sunflower'}).then( (doc) => {
+            expect(doc).to.have.property('name', 'sunflower');
+            expect(doc).to.have.property('color', 'yellow');
+            done();
+          })
+          
+        });
+      
+      
+    });
+    
+    
+    //TODO FAIL NO FLASH MESSAGE
+    it ('should not create a new flower on POST to /newFlower when name is missing and show a flash error message', (done) => {
+      chai.request(server)
+        .post('/newFlower')
+        .end((err, res) => {
+          // redirect to home page, nothing created
+          expect(res.text).to.include('enter a name for the flower'); // flash error
+          flowers.find().count().then( (count) => {
+            expect(count).to.be.equal(0);
+            done();
+          })
+        });
+    });
+  
+    
+    it ('should create a new flower on POST to /newFlower when color is missing', (done) => {
+      chai.request(server)
+        .post('/newFlower')
+        .send({ name : 'sunflower'})
+        .end((err, res) => {
+          // redirect to home page, nothing created
+          expect(res.text).not.to.include('enter a name for the flower'); // no flash error
+          expect(res.text).to.include('sunflower');
+          expect(res.text).to.include('No color set');
+  
+          flowers.find( { name : 'sunflower' }).toArray().then( (docs) => {
+            expect(docs).to.have.lengthOf(1);
+            expect(docs[0]).to.not.have.property('color');
+            done();
+          })
+        });
+    });
+  
     
   });  // End of describe('flower tests with empty db')
   
@@ -225,13 +281,27 @@ describe('open close db', () => {
           });
         });
     });
+  
+  
+    it('should return 404 on POST to delete a flower document on POST to valid but not found _id', (done) => {
+      chai.request(server)
+        .post('/delete')
+        .send({ '_id' : '_id=123456123456123456123456'})   //valid but doesn't exist
+        .end((err, res) => {
+          expect(res.status).to.be.equal(404);
+          flowers.findOne({_id: _id}).then((doc) => {
+            let rose_equals_doc = _.isEqual(doc, rose);
+            expect(rose_equals_doc).to.be.true;
+            return done();
+          });
+        });
+    });
     
     
     it('should return 404 on POST to delete a flower document on POST to delete no _id', (done) => {
       chai.request(server)
         .post('/delete')
         .end((err, res) => {
-          
           expect(res.status).to.be.equal(404);
           flowers.findOne({_id: _id}).then((doc) => {
             let rose_equals_doc = _.isEqual(doc, rose);
@@ -248,44 +318,169 @@ describe('open close db', () => {
   
   describe('Flowers with images operations', () => {
     
-    let _id;    // Of the test flower inserted into the database
-    let rose;
+    let rose, daisy;
     
-    beforeEach('insert two test documents', function (done) {
+    let mockUserDir = path.join(__dirname, 'mockUserImages');
+    
+    
+    beforeEach('insert two test documents', (done) => {
+  
+      fs.ensureDirSync(mockUserDir);
+      fs.writeFileSync(path.join(mockUserDir, 'test_replace_daisy_image.jpg'), 'mock replace daisy image content');
+      fs.writeFileSync(path.join(mockUserDir, 'test_new_rose_image.jpg'), 'mock new rose image content');
+  
+      fs.ensureDirSync(testUploadDir);
+      fs.writeFileSync(path.join(testUploadDir, 'test_daisy_image.jpg'), 'mock daisy image content');
+  
       
       flowers.insertMany(
-        [{ name: 'rose', color: 'pink'},
-        { name: 'daisy', color: 'white'}]).then((result)=>{
-        _id = result.insertedId;
-        rose = result.ops[0];
-        return done();
-      }).catch((err) => {
-        return done(err);
+        [
+          {name: 'rose', color: 'pink'},
+          {name: 'daisy', color: 'white', img_url: 'test_daisy_image.jpg'}
+        ])
         
-      })
+        .then((result) => {
+          rose = result.ops[0];
+          daisy = result.ops[1];
+          return done();
+        })
+      
     });
     
     
-    it('should add an image on POST to setImage body._id if flower does not have image');
-    
-    
-    it('should change the image on POST to setImage body._id if flower has image');
-    
+    it('should not take any action if no file provided', (done) => {
+  
+      chai.request(server)
+        .post('/setImage')
+        .send({ _id : rose._id})   // valid ID but no image.
+        .end((err, res) => {
+          expect(res.status).to.be.equal(200);
+          expect(res.text).to.include('Please provide an image file');
+          flowers.findOne( { name : 'rose' }).next((doc) => {
+            noChange = _.isEqual(rose, doc);
+            expect(noChange).to.be.true;
+            done();
+          })
+        });
+      
+    });
+  
+  
+    it('should return 404 on post to /setImage if no _id provided', (done) => {
+      chai.request(server)
+        .post('/setImage')
+        .end((err, res) => {
+          expect(res.status).to.be.equal(404);
+          done();
+        });
+    });
+
     
     it('should delete a flower document on POST to delete with body._id AND delete associated image' , (done) => {
+      
       chai.request(server)
         .post('/delete')
-        .send({ _id : _id})
+        .send({ _id : daisy._id})
         .end((err, res) => {
-          flowers.findOne({'_id' : _id}).then((doc) => {
+        
+          expect(res.status).to.be.equal(200);
+          flowers.findOne({'_id' : daisy._id}).then((doc) => {
+            
             expect(doc).to.be.null;
-            // NOT FINSISHED fail('finish this test');
-            return done()
+            
+            // check the file system, the file should be removed
+            var fileExists = fs.pathExistsSync( path.join(testUploadDir, daisy.img_url) );
+            expect(fileExists).to.be.false
+            done();
           })
         })
-    }   );
+    });
     
-    it('should delete a flower document on POST to delete with body._id AND not error if no associated image');
+    
+    it('should delete a flower document on POST to delete with body._id AND not error if no associated image', (done) => {
+      
+      chai.request(server)
+        .post('/delete')
+        .send({ _id : rose._id})
+        .end((err, res) => {
+      
+          expect(res.status).to.be.equal(200);
+          flowers.findOne({'_id' : rose._id}).then((doc) => {
+        
+            expect(doc).to.be.null;
+            done();
+            
+          })
+        })
+  
+  
+    });
+    
+    
+    it('should add an image on POST to setImage body._id if flower does not have image', (done) => {
+      
+      var new_rose_img = 'test_new_rose_image.jpg';
+      
+      chai.request(server)
+        .post('/setImage')
+        .send({ _id : rose._id})
+        .attach('flower_image', fs.readFileSync( path.join(mockUserDir, new_rose_img) ), new_rose_img)
+        .end((err, res) => {
+      
+          expect(res.status).to.be.equal(200);
+          flowers.findOne({'_id' : rose._id}).then((doc) => {
+        
+            expect(doc).to.have.property('img_url');
+            
+            // expect doc.img_url file to exists
+            
+            let wasFileUploaded = fs.existsSync( path.join( testUploadDir, doc.img_url));
+            expect(wasFileUploaded).to.be.true;
+            
+            done();
+        
+          })
+        })
+    });
+    
+    
+    it('should change the image on POST to setImage body._id if flower has image', (done) => {
+      
+      // daisy's original file was called test_daisy_image.jpg
+      
+      chai.request(server)
+        .post('/setImage')
+        .send({ _id : daisy._id})
+        .attach('flower_image', fs.readFileSync( path.join(mockUserDir, 'test_replace_daisy_image.jpg') ), 'test_replace_daisy_image.jpg')
+        .end((err, res) => {
+      
+          expect(res.status).to.be.equal(200);
+          flowers.findOne({'_id' : rose._id}).then((doc) => {
+        
+            expect(doc).to.have.property('img_url');
+            
+            let wasFileUploaded = fs.existsSync( path.join( testUploadDir, doc.img_url));
+            expect(wasFileUploaded).to.be.true;
+            
+            let isOldFileThere = fs.existsSync( path.join(testUploadDir, "test_daisy_image.jpg") );
+            expect(isOldFileThere).to.be.false;
+            
+          })
+        })
+  
+    });
+  
+    
+    afterEach('remove files in testUpload and mockUserDir directory', (done) => {
+      
+      // fs.unlinkSync( path.join(mockUserDir, 'test_new_rose_image.jpg') );
+      // fs.unlinkSync( path.join(mockUserDir, 'test_replace_daisy_image.jpg') );
+      // fs.unlinkSync( path.join(testUploadDir, 'test_daisy_image.jpg') );
+      //
+      done()
+      
+    });
+  
     
   });   // end of describe images
   

@@ -7,7 +7,7 @@
   <h2>Image</h2>
 
   {{# if flower.img_url}}
-    <img class="main_flower_image" src="/images/{{flower.img_url}}"> <P>Change?</P>
+    <img class="main_flower_image" src="/uploads/{{flower.img_url}}"> <P>Change?</P>
   {{else}}
     <P>No image for {{flower.name}}. Want to upload one? </P>
   {{/if}}
@@ -20,6 +20,11 @@
     <input type="file" name="flower_image"  accept="image/*">
     <input type="submit" value="Upload">
   </form>
+
+
+  {{#if messages}}
+    <p class="error_msg">{{messages.error}}</p>
+  {{/if}}
 </div>
 
 

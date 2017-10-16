@@ -1,18 +1,14 @@
 ObjectID = require('mongodb').ObjectID;
 
 
-
 function fromParams(req, res, next) {
   
   let _id = req.params._id;
   
-  console.log('The middleware says the ID is ', _id);
-  console.log('is valid?', ObjectID.isValid(_id));
-  
   if (! ObjectID.isValid(_id) ) {
-    console.log("No valid ObjectID associated with the _id attribute in the request PARAMS. _id was ", _id);
-    res.status(404);
-    next();
+    let notFound = Error('Not a valid Object ID');
+    notFound.status = 404;
+    next(notFound);
   }
   
   else {
@@ -28,13 +24,10 @@ function fromBody(req, res, next) {
   
   let _id = req.body._id;
   
-  console.log('The middleware says the ID is ', _id);
-  console.log('is valid?', ObjectID.isValid(_id));
-  
   if (! ObjectID.isValid(_id) ) {
-    console.log("No valid ObjectID associated with the _id attribute in the request BODY. _id was ", _id);
-    res.statusCode = 404;
-    next();   // to the error handler.
+    let notFound = Error('Not a valid Object ID');
+    notFound.status = 404;
+    next(notFound);   // to the error handler.
   }
   
   else {

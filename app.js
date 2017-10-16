@@ -4,11 +4,18 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var flash = require('express-flash');
+var session = require('express-session');
+
+var dbconfig = require('./config/db');
 
 var MongoClient = require('mongodb');
 
 var index = require('./routes/index');
 var users = require('./routes/users');
+
+
+var db_url = dbconfig.url;
 
 var app = express();
 
@@ -25,20 +32,10 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(session( { secret : 'top secret!', resave: false, saveUninitialized : false} ));
+app.use(flash());
 
-
-// MONGO_URL = mongodb://localhost:27017/garden
-// plus whatever admin creds
-
-
-//var url = process.env.MONGO_URL;
-
-
-console.log(process.env.MONGO_URL);
-
-let url = 'mongodb://127.0.0.1:27017/testGarden';
-
-MongoClient.connect(url).then((db) => {
+MongoClient.connect(db_url).then((db) => {
   
   app.use('/', function(req, res, next){
     req.flowers = db.collection('flowers');

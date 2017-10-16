@@ -1,24 +1,43 @@
+<div id="addFlowerForm">
+
 <p>Add</p>
 <form method="post" action="/newFlower">
-Name  <input name="name" >
-Color  <input name="color" >
+  Name  <input name="name" >
+  Color  <input name="color" >
   <input type="submit"></form>
+
 </form>
 
+  {{#if messages}}
+    <p class="error_msg">{{messages.error}}</p>
+  {{/if}}
 
-{{# if flowers }}
-
-{{# each flowers}}
-<div>  <h2>{{this.name}}</h2>
- <P> {{this.name}} is {{this.color}} </P>
-  <img src="{{this.img_url}}"/>
-
-  <a href="/details/{{this._id}}">Edit or delete {{this.name}}</a>
 </div>
 
-{{/each}}
 
 
-{{else}}
-<p>No flowers in the database.</p>
-{{/if}}
+<div id="FlowerList">
+
+  {{# if flowers }}
+
+  {{# each flowers}}
+  <div>  <h2>{{this.name}}</h2>
+
+    {{# if this.color}}
+   <P> {{this.name}} is {{this.color}} </P>
+    {{else}}
+      <P>No color set</P>
+    {{/if}}
+    <img src="{{this.img_url}}"/>
+
+    <a href="/details/{{this._id}}">Edit or delete {{this.name}}</a>
+  </div>
+
+  {{/each}}
+
+
+  {{else}}
+  <p>No flowers in the database.</p>
+  {{/if}}
+
+</div>
