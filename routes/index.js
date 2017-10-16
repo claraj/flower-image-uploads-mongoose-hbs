@@ -154,10 +154,11 @@ router.post('/delete', idOr404.fromBody, function(req, res, next){
 });
 
 
-/* Use multer to upload the image and save it  */
+/* Use multer to upload the image and save it
+ * idOR404 middleware used too */
 router.post('/setImage', upload.single('flower_image'), idOr404.fromBody, function(req, res, next){
   
-  console.log(req.file, ' and id is ', req.body._id);
+  console.log('SET IMAGE' , req.file, ' and id is ', req.body._id);
   
   var oldImage;
   var newFilename;
@@ -213,7 +214,7 @@ router.post('/setImage', upload.single('flower_image'), idOr404.fromBody, functi
         return req.flowers.findOneAndUpdate({_id: req._id}, {$set: {img_url: newFilename}})
       
       })
-    
+      
       .then((result) => {
       
         console.log('updated doc with image, results ', result);
@@ -222,8 +223,24 @@ router.post('/setImage', upload.single('flower_image'), idOr404.fromBody, functi
         res.redirect('back');
         
       })
+  
+      .then(() => {
+  
+        // Delete (unlink) old image
+        if (oldImage) {
+          return fs.unlink( path.join(uploadDir, oldImage) )
+        }
     
+      })
+      
       .catch((err) => {
+      
+        if (err.code === 'ENOENT') {
+          // deleted file not found, log and ignore
+          console.log('Tried to delete the old file for this flower, but it was not found', uploadDir, oldImage)
+          res.redirect('back')
+        }
+      
          next(err);
       });
   

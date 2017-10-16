@@ -9,7 +9,7 @@ var uploadDir;
 // If running tests,
 
 if (NODE_ENV === 'test') {
-  uploadDir = path.join('.', 'test', 'uploadTests');
+  uploadDir = path.join('.', 'test', 'uploadTEST');
 }
 
 // For live server, e.g. deployed to Heroku,

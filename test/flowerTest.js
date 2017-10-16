@@ -330,7 +330,7 @@ describe('open close db', () => {
       fs.writeFileSync(path.join(mockUserDir, 'test_new_rose_image.jpg'), 'mock new rose image content');
   
       fs.ensureDirSync(testUploadDir);
-      fs.writeFileSync(path.join(testUploadDir, 'test_daisy_image.jpg'), 'mock daisy image content');
+      fs.writeFileSync( path.join(testUploadDir, 'test_daisy_image.jpg'), 'mock daisy image content');
   
       
       flowers.insertMany(
@@ -346,8 +346,8 @@ describe('open close db', () => {
         })
       
     });
-    
-    
+  
+    //TODO FAIL NO FLASH MESSAGE
     it('should not take any action if no file provided', (done) => {
   
       chai.request(server)
@@ -423,20 +423,19 @@ describe('open close db', () => {
       
       chai.request(server)
         .post('/setImage')
-        .send({ _id : rose._id})
+        //.send({ _id : rose._id})
         .attach('flower_image', fs.readFileSync( path.join(mockUserDir, new_rose_img) ), new_rose_img)
+        .field("_id", rose._id.toString())
         .end((err, res) => {
-      
-          expect(res.status).to.be.equal(200);
+          
+          //  expect(res.status).to.be.equal(200);
           flowers.findOne({'_id' : rose._id}).then((doc) => {
-        
             expect(doc).to.have.property('img_url');
-            
             // expect doc.img_url file to exists
-            
-            let wasFileUploaded = fs.existsSync( path.join( testUploadDir, doc.img_url));
+            let wasFileUploaded = fs.pathExistsSync( path.join( testUploadDir, doc.img_url));
             expect(wasFileUploaded).to.be.true;
-            
+  
+  
             done();
         
           })
@@ -450,13 +449,13 @@ describe('open close db', () => {
       
       chai.request(server)
         .post('/setImage')
-        .send({ _id : daisy._id})
         .attach('flower_image', fs.readFileSync( path.join(mockUserDir, 'test_replace_daisy_image.jpg') ), 'test_replace_daisy_image.jpg')
+        .field( '_id', daisy._id.toString())
         .end((err, res) => {
       
           expect(res.status).to.be.equal(200);
-          flowers.findOne({'_id' : rose._id}).then((doc) => {
-        
+          flowers.findOne({ _id : daisy._id }).then((doc) => {
+          
             expect(doc).to.have.property('img_url');
             
             let wasFileUploaded = fs.existsSync( path.join( testUploadDir, doc.img_url));
@@ -464,6 +463,8 @@ describe('open close db', () => {
             
             let isOldFileThere = fs.existsSync( path.join(testUploadDir, "test_daisy_image.jpg") );
             expect(isOldFileThere).to.be.false;
+            
+            done();
             
           })
         })
@@ -475,12 +476,23 @@ describe('open close db', () => {
       
       // fs.unlinkSync( path.join(mockUserDir, 'test_new_rose_image.jpg') );
       // fs.unlinkSync( path.join(mockUserDir, 'test_replace_daisy_image.jpg') );
-      // fs.unlinkSync( path.join(testUploadDir, 'test_daisy_image.jpg') );
+  
+      
+      //fs.unlinkSync( path.join(testUploadDir, 'test_daisy_image.jpg') );
       //
+      //
+      // let uploadedFiles = fs.readdirSync(testUploadDir);
+      //
+      // console.log(uploadedFiles);
+      // for ( let x = 0 ; x < uploadedFiles ; x++ ) {
+      //   fs.unlinkSync( path.join( testUploadDir, uploadedFiles[x])  );
+      // }
+      //
+     
       done()
       
     });
-  
+   
     
   });   // end of describe images
   

@@ -22,6 +22,8 @@ function fromParams(req, res, next) {
 
 function fromBody(req, res, next) {
   
+  console.log("middleware", req.body)
+  
   let _id = req.body._id;
   
   if (! ObjectID.isValid(_id) ) {

@@ -8,7 +8,7 @@ Example app using Express, and MongoDB.
 npm install
 ```
 
-~~Ensure public/uploads directory exists~~
+Ensure public/uploads directory exists
 
 set two environment variables
 
@@ -23,7 +23,6 @@ If you can't set these, then the app will use `mongodb://127.0.0.1:27017/garden`
 
 ### Running tests
 
-~~Ensure public/uploadTests directory exists~~
 
 Install Mocha globally (this may not work on lab computers)
 
@@ -48,3 +47,6 @@ If on lab computer, may need to use full path to mocha e.g.
 ```
 c:\users\STARID\AppData\Roaming\npm\mocha --watch --timeout=2000 test
 ```
+
+
+Can ignore or test files created in uploadTEST.
