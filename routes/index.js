@@ -10,8 +10,6 @@ var upload = multer({ dest : uploadDir});
 
 var router = express.Router();
 
-//fs.ensureDirSync(uploadDir);   // does this do anything??
-
 
 /* GET home page, list of all flower documents. */
 router.get('/', function(req, res, next) {
@@ -60,8 +58,8 @@ router.post('/newFlower', function(req, res, next){
   //validate: need a name. Color is optional
   
   if (!req.body.name) {
-    req.flash('error', 'Enter a name for the flower');
-    res.redirect('/');
+    req.flash('error', 'Please provide a name');
+    return res.redirect('/');
   }
   
   else {
@@ -76,9 +74,7 @@ router.post('/newFlower', function(req, res, next){
 });
 
 
-
 /* Update the color of the flower.
-
 * idOr404.fromBody extracts the Object ID from the request body,
 * converts it to an ObjectID, and adds it to the request as req._id  */
 
@@ -168,10 +164,8 @@ router.post('/setImage', upload.single('flower_image'), idOr404.fromBody, functi
   
   if (!req.file) {
     
-    // flash error
-    
     req.flash('error', 'Please provide an image file');
-    res.redirect('back');  // back to detail page.
+    res.redirect('/details/' + req.body._id);  // back to detail page.
     
   }
   

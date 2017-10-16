@@ -15,3 +15,8 @@ a {
 .main_flower_image {
   max-width: 100%;
 }
+
+.error_message {
+  color: darkmagenta;
+  font-style: italic;
+}

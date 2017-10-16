@@ -123,13 +123,13 @@ describe('open close db', () => {
     });
     
     
-    //TODO FAIL NO FLASH MESSAGE
+    //TODO FAIL not recognizing flash message
     it ('should not create a new flower on POST to /newFlower when name is missing and show a flash error message', (done) => {
       chai.request(server)
         .post('/newFlower')
         .end((err, res) => {
           // redirect to home page, nothing created
-          expect(res.text).to.include('enter a name for the flower'); // flash error
+          expect(res.text).to.include('Please provide a name'); // flash error
           flowers.find().count().then( (count) => {
             expect(count).to.be.equal(0);
             done();
@@ -347,7 +347,7 @@ describe('open close db', () => {
       
     });
   
-    //TODO FAIL NO FLASH MESSAGE
+    //TODO FAIL recognizing flash message
     it('should not take any action if no file provided', (done) => {
   
       chai.request(server)

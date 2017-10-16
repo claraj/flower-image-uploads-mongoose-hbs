@@ -21,10 +21,12 @@
     <input type="submit" value="Upload">
   </form>
 
-
-  {{#if messages}}
-    <p class="error_msg">{{messages.error}}</p>
+message here
+  {{# if messages.error}}
+    <p class="error_message">Error: {{messages.error}}</p>
   {{/if}}
+
+
 </div>
 
 
