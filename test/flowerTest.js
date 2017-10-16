@@ -464,7 +464,7 @@ describe('open close db', () => {
             let isOldFileThere = fs.existsSync( path.join(testUploadDir, "test_daisy_image.jpg") );
             expect(isOldFileThere).to.be.false;
             
-            done();
+            done();git
             
           })
         })
